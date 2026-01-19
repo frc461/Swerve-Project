@@ -32,6 +32,9 @@ import frc.robot.generated.TunerConstants.TunerSwerveDrivetrain;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 
+//
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 
 /**
  * Class that extends the Phoenix 6 SwerveDrivetrain class and implements
@@ -44,6 +47,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     private static final double kSimLoopPeriod = 0.004; // 4 ms
     private Notifier m_simNotifier = null;
     private double m_lastSimTime;
+
+    private static final SwerveDriveState state = new SwerveDriveState();
 
     /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
     private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -72,6 +77,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             this
         )
     );
+
+    public Pose2d getPose() { return state.Pose; }
+    public void resetPose() { /* does nothing for now */ }
+    public ChassisSpeeds getRobotRelativeSpeeds() { return state.Speeds; }
+    public Command driveRobotRelative(ChassisSpeeds speed) { /* also does nothing for now*/ }
 
     /* SysId routine for characterizing steer. This is used to find PID gains for the steer motors. */
     private final SysIdRoutine m_sysIdRoutineSteer = new SysIdRoutine(
@@ -316,9 +326,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
             this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
             (speeds, feedforwards) -> void driveRobotRelative(speeds), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
             new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
-                    new PIDConstants(5.0, 0.0, 0.0 // Rotation PID constants
+                    new PIDConstants(5.0, 0.0, 0.0) // Rotation PID constants
             )
     );
-    }          
+}          
 
 
