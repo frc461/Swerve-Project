@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Notifier;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -78,10 +79,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         )
     );
 
-    public Pose2d getPose() { return state.Pose; }
-    public void resetPose() { /* does nothing for now */ }
-    public ChassisSpeeds getRobotRelativeSpeeds() { return state.Speeds; }
-    public Command driveRobotRelative(ChassisSpeeds speed) { /* also does nothing for now*/ }
+
 
     /* SysId routine for characterizing steer. This is used to find PID gains for the steer motors. */
     private final SysIdRoutine m_sysIdRoutineSteer = new SysIdRoutine(
@@ -147,6 +145,51 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
         if (Utils.isSimulation()) {
             startSimThread();
         }
+        RobotConfig config = null;
+        try{
+            config = RobotConfig.fromGUISettings();
+        } catch (Exception e) {
+            // Handle exception as needed
+            e.printStackTrace();
+        }
+
+        // Configure AutoBuilder last
+        AutoBuilder.configure(
+                this::getPose, // Robot pose supplier
+                this::resetPose, // Method to reset odometry (will be called if your auto has a starting pose)
+                this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
+                (speeds, feedforwards) -> driveRobotRelative(speeds), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
+                new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
+                        new PIDConstants(5.0, 0.0, 0.0), // Translation PID constants
+                        new PIDConstants(5.0, 0.0, 0.0) // Rotation PID constants
+                ),
+                config, // The robot configuration
+                () -> {
+                    // Boolean supplier that controls when the path will be mirrored for the red alliance
+                    // This will flip the path being followed to the red side of the field.
+                    // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
+
+                    var alliance = DriverStation.getAlliance();
+                    if (alliance.isPresent()) {
+                        return alliance.get() == DriverStation.Alliance.Red;
+                    }
+                    return false;
+                },
+                this // Reference to this subsystem to set requirements
+        );
+
+    }
+    public Pose2d getPose() {
+        return state.Pose;
+    }
+    public void resetPose() {
+        /* does nothing for now */
+    }
+    public ChassisSpeeds getRobotRelativeSpeeds() {
+        return state.Speeds;
+    }
+    public Command driveRobotRelative(ChassisSpeeds speed) {
+        return Commands.none();
     }
 
     /**
@@ -310,7 +353,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     /**
      * Return the pose at a given timestamp, if the buffer is not empty.
      *
-     * @param tihttps://github.com/frc461/Base-Swerve-2026.gitmestampSeconds The timestamp of the pose in seconds.
+     * @param timestampSeconds The timestamp of the pose in seconds.
      * @return The pose at the given timestamp (or Optional.empty() if the buffer is empty).
      */
     @Override
@@ -319,16 +362,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain implements Su
     }
    
 
-    // Configure AutoBuilder last
-    AutoBuilder.configure(
-            this::getPose, // Robot pose supplier
-            this::resetPose, // Method to reset odometry (will be called if your auto has a starting pose)
-            this::getRobotRelativeSpeeds, // ChassisSpeeds supplier. MUST BE ROBOT RELATIVE
-            (speeds, feedforwards) -> void driveRobotRelative(speeds), // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
-            new PPHolonomicDriveController( // PPHolonomicController is the built in path following controller for holonomic drive trains
-                    new PIDConstants(5.0, 0.0, 0.0) // Rotation PID constants
-            )
-    );
+
 }          
 
 
